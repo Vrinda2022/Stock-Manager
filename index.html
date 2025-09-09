@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Stock Manager</title>
+</head>
+<body style="text-align:center; margin-top:50px;">
+  <h1>Stock Manager</h1>
+
+  <input id="code" type="text" placeholder="Product Code" /><br /><br />
+  <input id="retail" type="number" placeholder="Current Stock" /><br /><br />
+  <input id="billing" type="number" placeholder="Sold Quantity" /><br /><br />
+  <input id="remarks" type="text" placeholder="Notes" /><br /><br />
+
+  <button onclick="updateStock()">Update Stock</button>
+  <br /><br />
+  <button onclick="loadAnalysis()">View Analysis</button>
+  <div id="analysis"></div>
+
+  <script>
+    async function updateStock() {
+      const code = document.getElementById("code").value;
+      const retail = document.getElementById("retail").value;
+      const billing = document.getElementById("billing").value;
+      const remarks = document.getElementById("remarks").value;
+
+      await fetch("http://localhost:5000/update-stock", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code, retail, billing, remarks }),
+      });
+
+      alert("Stock updated!");
+    }
+
+    async function loadAnalysis() {
+      const res = await fetch("http://localhost:5000/analysis");
+      const data = await res.json();
+      document.getElementById("analysis").innerHTML =
+        "<pre>" + JSON.stringify(data, null, 2) + "</pre>";
+    }
+  </script>
+</body>
+</html>
