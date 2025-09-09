@@ -1,60 +1,38 @@
-import express from "express";
-import bodyParser from "body-parser";
-import cors from "cors";
-import XLSX from "xlsx";
-import path from "path";
-import dotenv from "dotenv";
-import fs from "fs";
-import { fileURLToPath } from "url";
-
-dotenv.config(); // Load .env variables
+const express = require("express");
+const bodyParser = require("body-parser");
+const cors = require("cors");
+const XLSX = require("xlsx");
+const path = require("path");
 
 const app = express();
-
-// ES module helpers
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Use PORT from environment or fallback for local testing
 const PORT = process.env.PORT || 5000;
 
-// Use Excel file path from .env or fallback
-const excelFilePath = path.join(process.cwd(), process.env.EXCEL_FILE || "stocks.xlsx");
-
-// Middleware
 app.use(cors());
 app.use(bodyParser.json());
-app.use(express.static(path.join(__dirname))); // Serve static files
 
-// Load data from Excel
-const loadData = () => {
-  if (!fs.existsSync(excelFilePath)) return [];
-  const wb = XLSX.readFile(excelFilePath);
-  const ws = wb.Sheets["Sheet1"];
-  return XLSX.utils.sheet_to_json(ws);
-};
+// Excel file path
+const filePath = path.join(__dirname, "stocks.xlsx");
 
-// Save data to Excel
-const saveData = (data) => {
-  let wb;
-  if (fs.existsSync(excelFilePath)) {
-    wb = XLSX.readFile(excelFilePath);
-  } else {
-    wb = XLSX.utils.book_new();
-  }
-  const ws = XLSX.utils.json_to_sheet(data);
-  XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
-  XLSX.writeFile(wb, excelFilePath);
-};
-
-// Routes
-
-// Serve index.html for root
+// Serve index.html (frontend) at root
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "index.html"));
 });
 
-// Update stock by product code
+// -------- Excel API --------
+const loadData = () => {
+  const wb = XLSX.readFile(filePath);
+  const ws = wb.Sheets["Sheet1"];
+  return XLSX.utils.sheet_to_json(ws);
+};
+
+const saveData = (data) => {
+  const wb = XLSX.readFile(filePath);
+  const ws = XLSX.utils.json_to_sheet(data);
+  wb.Sheets["Sheet1"] = ws;
+  XLSX.writeFile(wb, filePath);
+};
+
+// Update stock
 app.post("/update-stock", (req, res) => {
   const { code, retail, billing, remarks } = req.body;
   let data = loadData();
@@ -78,7 +56,7 @@ app.get("/stocks", (req, res) => {
   res.json(loadData());
 });
 
-// Analysis: total available, sold, low stock, high stock
+// Analysis
 app.get("/analysis", (req, res) => {
   const data = loadData();
   if (data.length === 0) return res.json({ message: "No data available" });
@@ -101,20 +79,11 @@ app.get("/analysis", (req, res) => {
   });
 });
 
-// Debug route
-app.get("/debug-headers", (req, res) => {
-  const data = loadData();
-  if (data.length === 0) {
-    return res.json({ message: "No data found in Excel" });
-  }
-
-  res.json({
-    headers: Object.keys(data[0]),
-    firstRow: data[0],
-  });
+// ✅ Express v5 compatible fallback (instead of app.get("*"))
+app.use((req, res) => {
+  res.sendFile(path.join(__dirname, "index.html"));
 });
 
-// Start server
 app.listen(PORT, () => {
-  console.log(`Server running at port ${PORT}`);
+  console.log(`✅ Server running at http://localhost:${PORT}`);
 });
