@@ -5,10 +5,15 @@ import XLSX from "xlsx";
 import path from "path";
 import dotenv from "dotenv";
 import fs from "fs";
+import { fileURLToPath } from "url";
 
 dotenv.config(); // Load .env variables
 
 const app = express();
+
+// ES module helpers
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Use PORT from environment or fallback for local testing
 const PORT = process.env.PORT || 5000;
@@ -16,8 +21,10 @@ const PORT = process.env.PORT || 5000;
 // Use Excel file path from .env or fallback
 const excelFilePath = path.join(process.cwd(), process.env.EXCEL_FILE || "stocks.xlsx");
 
+// Middleware
 app.use(cors());
 app.use(bodyParser.json());
+app.use(express.static(path.join(__dirname))); // Serve static files
 
 // Load data from Excel
 const loadData = () => {
@@ -39,6 +46,13 @@ const saveData = (data) => {
   XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
   XLSX.writeFile(wb, excelFilePath);
 };
+
+// Routes
+
+// Serve index.html for root
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "index.html"));
+});
 
 // Update stock by product code
 app.post("/update-stock", (req, res) => {
@@ -87,10 +101,9 @@ app.get("/analysis", (req, res) => {
   });
 });
 
-// Debug route: check headers in Excel
+// Debug route
 app.get("/debug-headers", (req, res) => {
   const data = loadData();
-
   if (data.length === 0) {
     return res.json({ message: "No data found in Excel" });
   }
