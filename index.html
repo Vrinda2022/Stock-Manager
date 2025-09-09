@@ -18,23 +18,27 @@
   <div id="analysis"></div>
 
   <script>
+    // Base URL (works both on local and Render)
+    const BASE_URL = window.location.origin;
+
     async function updateStock() {
       const code = document.getElementById("code").value;
       const retail = document.getElementById("retail").value;
       const billing = document.getElementById("billing").value;
       const remarks = document.getElementById("remarks").value;
 
-      await fetch("http://localhost:5000/update-stock", {
+      const res = await fetch(`${BASE_URL}/update-stock`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code, retail, billing, remarks }),
       });
 
-      alert("Stock updated!");
+      const result = await res.json();
+      alert(result.message || "Stock updated!");
     }
 
     async function loadAnalysis() {
-      const res = await fetch("http://localhost:5000/analysis");
+      const res = await fetch(`${BASE_URL}/analysis`);
       const data = await res.json();
       document.getElementById("analysis").innerHTML =
         "<pre>" + JSON.stringify(data, null, 2) + "</pre>";
