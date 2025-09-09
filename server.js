@@ -1,28 +1,43 @@
-const express = require("express");
-const bodyParser = require("body-parser");
-const cors = require("cors");
-const XLSX = require("xlsx");
-const fs = require("fs");
+import express from "express";
+import bodyParser from "body-parser";
+import cors from "cors";
+import XLSX from "xlsx";
+import path from "path";
+import dotenv from "dotenv";
+import fs from "fs";
+
+dotenv.config(); // Load .env variables
 
 const app = express();
-const PORT = 5000;
+
+// Use PORT from environment or fallback for local testing
+const PORT = process.env.PORT || 5000;
+
+// Use Excel file path from .env or fallback
+const excelFilePath = path.join(process.cwd(), process.env.EXCEL_FILE || "stocks.xlsx");
 
 app.use(cors());
 app.use(bodyParser.json());
 
-const filePath = "./stocks.xlsx";
-
+// Load data from Excel
 const loadData = () => {
-  const wb = XLSX.readFile(filePath);
+  if (!fs.existsSync(excelFilePath)) return [];
+  const wb = XLSX.readFile(excelFilePath);
   const ws = wb.Sheets["Sheet1"];
   return XLSX.utils.sheet_to_json(ws);
 };
 
+// Save data to Excel
 const saveData = (data) => {
-    const wb = XLSX.readFile(filePath);
-    const ws = XLSX.utils.json_to_sheet(data);
-    wb.Sheets["Sheet1"] = ws;
-    XLSX.writeFile(wb, filePath);   
+  let wb;
+  if (fs.existsSync(excelFilePath)) {
+    wb = XLSX.readFile(excelFilePath);
+  } else {
+    wb = XLSX.utils.book_new();
+  }
+  const ws = XLSX.utils.json_to_sheet(data);
+  XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+  XLSX.writeFile(wb, excelFilePath);
 };
 
 // Update stock by product code
@@ -72,7 +87,7 @@ app.get("/analysis", (req, res) => {
   });
 });
 
-// Debug route: check the headers in the Excel
+// Debug route: check headers in Excel
 app.get("/debug-headers", (req, res) => {
   const data = loadData();
 
@@ -80,13 +95,13 @@ app.get("/debug-headers", (req, res) => {
     return res.json({ message: "No data found in Excel" });
   }
 
-  // Return the first row to see the keys
   res.json({
     headers: Object.keys(data[0]),
     firstRow: data[0],
   });
 });
 
+// Start server
 app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
+  console.log(`Server running at port ${PORT}`);
 });
